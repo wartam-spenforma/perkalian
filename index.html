@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<title>Hitung Cepat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    /* ===== SEMUA CSS SAMA SEPERTI SEBELUMNYA ===== */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0 auto;
+        background-color: #f0f2f5;
+        color: #333;
+        padding: 20px;
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .container {
+        background-color: #bbc7f0;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        text-align: center;
+        max-width: 500px;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: max-width 0.5s ease-in-out;
+    }
+
+    .container.game-active {
+        max-width: 1000px;
+    }
+
+    h1 {
+        color: #2105f2;
+        margin-bottom: 5px;
+        font-size: 1.8em;
+    }
+
+    h2 {
+        color: #2105f2;
+        font-size: 1.2em;
+        margin-top: 5px;
+        margin-bottom: 20px;
+    }
+
+    .screen {
+        display: none;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .screen.active {
+        display: block;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #555;
+        text-align: left;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+        width: calc(100% - 20px);
+        padding: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1em;
+        box-sizing: border-box;
+    }
+
+    .level-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .level-button {
+        background-color: #28a87c;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1em;
+        cursor: pointer;
+        transition: background-color 0.3s ease, opacity 0.3s ease;
+        flex: 1;
+        min-width: 120px;
+        box-sizing: border-box;
+    }
+
+    .level-button:hover {
+        background-color: #a8284b;
+    }
+
+    .level-button:disabled { 
+        background-color: #cccccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .level-button:disabled:hover {
+        background-color: #cccccc;
+    }
+
+    button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 10px;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    .footer {
+        text-align: center;
+        font-size: 0.9em;
+        color: red;
+        margin-top: 5px;
+    }
+    
+    .footer p {
+        margin: 5px 0;
+    }
+    .game-layout-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 25px;
+        width: 100%;
+        text-align: left;
+    }
+
+    .info-panel {
+        flex: 1;
+        min-width: 280px;
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    }
+
+    .info-panel h2 {
+        color: #F44336;
+        margin-top: 0;
+        text-align: left;
+        border-bottom: 2px solid #2105f2;
+        padding-bottom: 10px;
+        font-size: 1.5em;
+        margin-bottom: 25px;
+    }
+
+    .info-panel .info {
+        font-size: 1.3em;
+        color: red;
+        margin-bottom: 20px;
+        font-weight: 500;
+    }
+
+    .info-panel .info b {
+        color: blue;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .game-panel {
+        flex: 1.5;
+        min-width: 300px;
+        text-align: center;
+    }
+
+    .question-area {
+        background-color: #e8f5e9;
+        padding: 25px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #d4edda;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        box-sizing: border-box;
+    }
+
+    .question {
+        font-size: 2.2em;
+        font-weight: bold;
+        color: #2e7d32;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .question-area input[type="text"] {
+        width: 120px;
+        text-align: center;
+        margin-bottom: 0;
+        flex-grow: 1;
+        font-size: 1.5em;
+        font-weight: bold;
+        pointer-events: none;
+        background-color: #fff;
+    }
+
+    #submitAnswer {
+        margin: 0;
+        display: block;
+        background-color: #4CAF50;
+        font-size: 1.2em;
+        padding: 15px;
+    }
+    #submitAnswer:hover {
+        background-color: #45a049;
+    }
+
+    #submitAnswer {
+        display: block;
+        background-color: #2196F3;
+        font-size: 1.2em;
+        padding: 15px;
+    }
+
+    #submitAnswer:hover {
+        background-color: #1976D2;
+    }
+
+    #score-submit-container {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    #score-submit-container > * {
+        flex: 1;
+        box-sizing: border-box;
+    }
+
+    #score-container {
+        background-color: #F44336;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 1.2em;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        margin-top: 0;
+        margin-bottom: 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    #keypad-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+        background-color: #fdeaea;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+    .keypad-btn {
+        padding: 15px;
+        font-size: 1.2em;
+        font-weight: bold;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background-color: #ffffff;
+        color: #0a0808;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: transform 0.1s ease;
+    }
+    .keypad-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .keypad-btn[data-key="C"] {
+        background-color: #ffffff;
+        color: #0a0808;
+    }
+    .keypad-btn[data-key="Backspace"] {
+        background-color: #ffffff;
+        color: #0a0808;
+    }
+    
+    .keypad-btn[data-key="."],
+    .keypad-btn[data-key=","],
+    .keypad-btn[data-key="-"] {
+        background-color: #ffffff;
+        color: #0a0808;
+    }
+    
+    .feedback {
+        margin: 15px 0;
+        padding: 10px;
+        font-weight: bold;
+        font-size: 1.1em;
+        text-align: center;
+        min-height: 20px;
+        transition: all 0.3s ease;
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .feedback.correct {
+        color: #28a745;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 5px;
+        animation: pulseCorrect 0.5s ease;
+    }
+    .feedback.incorrect {
+        color: #dc3545;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 5px;
+        animation: pulseIncorrect 0.5s ease;
+    }
+
+    @keyframes pulseCorrect {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    @keyframes pulseIncorrect {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        50% { transform: translateX(5px); }
+        75% { transform: translateX(-5px); }
+        100% { transform: translateX(0); }
+    }
+
+    button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .debug-button {
+        background-color: #ff9800;
+        color: white;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 5px;
+        font-size: 0.9em;
+        cursor: pointer;
+        margin: 10px 0;
+    }
+    
+    .debug-button:hover {
+        background-color: #e68900;
+    }
+    
+    @media (max-width: 850px) {
+        .container.game-active {
+            max-width: 500px;
+        }
+        .game-layout-container {
+            flex-direction: column;
+        }
+        .info-panel {
+            width: 100%;
+            min-width: unset;
+        }
+        .game-panel {
+            width: 100%;
+            min-width: unset;
+        }
+        .info-panel .info b {
+            display: inline-block;
+            margin-bottom: 0;
+            margin-right: 5px;
+            width: 110px;
+        }
+        .question-area input[type="text"] {
+            width: calc(100% - 10px);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .container {
+            padding: 20px;
+            margin: 10px;
+        }
+        h1 { font-size: 1.5em; }
+        .level-button {
+            flex: none;
+            width: calc(50% - 15px);
+        }
+        .question { font-size: 1.8em; }
+    }
+</style>
+</head>
+<body>
+    <div class="container" id="main-container">
+        <h1>TERAMPIL BERHITUNG</h1>
+        <h2>Hitung Cepat, Pasti Hebat!</h2>
+
+        <div id="start-screen" class="screen active">
+            <label for="playerName">Nama</label>
+            <select id="playerName">
+                <option value="" selected> Pilih Nama </option>
+            </select>
+
+            <label for="playerSchool">Sekolah</label>
+            <select id="playerSchool">
+                <option value="" selected> Pilih Sekolah </option>
+            </select>
+
+            <div style="text-align: center;">
+                <button class="debug-button" onclick="debugStructure()">Debug Structure</button>
+            </div>
+
+            <label>Pilih Level</label>
+            <div class="level-buttons">
+                <button class="level-button" data-level="1">Level 1</button>
+                <button class="level-button" data-level="2">Level 2</button>
+                <button class="level-button" data-level="3">Level 3</button>
+                <button class="level-button" data-level="4">Level 4</button>
+                <button class="level-button" data-level="5">Level 5</button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <div class="game-layout-container">
+                <div class="info-panel">
+                    <h2>Keterangan</h2>
+                    <p class="info"><b>Nama</b> <span id="displayPlayerName"></span></p>
+                    <p class="info"><b>Asal Sekolah</b> <span id="displayPlayerSchool"></span></p>
+                    <p class="info"><b>Level </b> <span id="displaySelectedLevel"></span></p>
+                    <p class="info"><b>Sisa waktu</b> <span id="timer"></span></p>
+                </div>
+                
+                <div class="game-panel">
+                    <div class="question-area">
+                        <p class="question"><span id="number1"></span> x <span id="number2"></span> = </p>
+                        <input type="text" id="playerAnswer" placeholder="Jawaban Anda" readonly>
+                    </div>
+
+                    <div id="score-submit-container">
+                        <button id="submitAnswer">Cek Jawaban</button>
+                        <div id="score-container">SKOR &nbsp <span id="score">0</span></div>
+                    </div>
+                    
+                    <p id="feedback" class="feedback"></p>
+
+                    <div id="keypad-container">
+                        <button class="keypad-btn" data-key="1">1</button>
+                        <button class="keypad-btn" data-key="2">2</button>
+                        <button class="keypad-btn" data-key="3">3</button>
+                        <button class="keypad-btn" data-key="4">4</button>
+                        <button class="keypad-btn" data-key="5">5</button>
+                        <button class="keypad-btn" data-key="6">6</button>
+                        <button class="keypad-btn" data-key="7">7</button>
+                        <button class="keypad-btn" data-key="8">8</button>
+                        <button class="keypad-btn" data-key="9">9</button>
+                        <button class="keypad-btn" data-key="0">0</button>
+                        <button class="keypad-btn" data-key="-">-</button>
+                        <button class="keypad-btn" data-key="C">C</button>
+                        <button class="keypad-btn" data-key="Backspace">⌫</button>
+                        <button class="keypad-btn" data-key=".">.</button>
+                        <button class="keypad-btn" data-key=",">,</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="end-screen" class="screen">
+            <h2>Waktu Habis</h2>
+            <p><b><span id="finalPlayerName"></span> -- <span id="finalPlayerSchool"></span>--</b></p>
+            <p>Skor akhir Anda adalah <b><span id="finalScore"></span></b></p>
+            <p>Anda saat ini bermain di level <span id="finalSelectedLevel"></span></p>
+            <p><b><i>Semangat belajar untuk meraih sukses</i></b></p>
+            <button id="restartButton">Main Lagi</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>@2025</p>
+        <p>Created By Wartam - SMPN 4 Majenang</p>
+    </div>
+
+    <script>
+        // ================================================================
+        // [PENTING] URL Web App Google Apps Script
+        // GANTI DENGAN URL WEB APP ANDA SETELAH DEPLOY
+        // ================================================================
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwTM1HwJgXOGnoHFKTDaFMfS_c464By5jNMNv-kErKQFH6tDeHBU4WO3IoyoFCo2FNfog/exec';
+
+        // ================================================================
+        // FUNGSI UTAMA UNTUK MEMANGGIL WEB APP
+        // ================================================================
+        function callWebApp(functionName, params = {}) {
+            return new Promise((resolve, reject) => {
+                const payload = {
+                    function: functionName,
+                    params: params
+                };
+
+                fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Penting untuk Apps Script
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        data: JSON.stringify(payload)
+                    })
+                })
+                .then(response => {
+                    // Karena mode: 'no-cors', kita tidak bisa membaca response langsung
+                    // Kita perlu menggunakan pendekatan alternatif
+                    return response.text();
+                })
+                .then(text => {
+                    try {
+                        const result = JSON.parse(text);
+                        if (result.error) {
+                            reject(new Error(result.error));
+                        } else {
+                            resolve(result.data);
+                        }
+                    } catch (e) {
+                        // Jika response bukan JSON, mungkin karena mode no-cors
+                        // Kita perlu menggunakan pendekatan dengan JSONP atau redirect
+                        reject(new Error('Gagal memproses response: ' + text));
+                    }
+                })
+                .catch(error => {
+                    reject(error);
+                });
+            });
+        }
+
+        // ================================================================
+        // FUNGSI WRAPPER UNTUK SETIAP FUNGSI BACKEND
+        // ================================================================
+
+        // 1. Get Initial Data
+        function getInitialData() {
+            return callWebApp('getInitialData', {});
+        }
+
+        // 2. Preload All Levels Data
+        function preloadAllLevelsData() {
+            return callWebApp('preloadAllLevelsData', {});
+        }
+
+        // 3. Get Multiplication Data
+        function getMultiplicationData(level) {
+            return callWebApp('getMultiplicationData', { level: level });
+        }
+
+        // 4. Get User Progress
+        function getUserProgress(name, school) {
+            return callWebApp('getUserProgress', { name: name, school: school });
+        }
+
+        // 5. Save User Result
+        function saveUserResult(resultData) {
+            return callWebApp('saveUserResult', { resultData: resultData });
+        }
+
+        // 6. Debug Structure
+        function debugSpreadsheetStructure() {
+            return callWebApp('debugSpreadsheetStructure', {});
+        }
+
+        // ================================================================
+        // KODE APLIKASI UTAMA (SAMA SEPERTI SEBELUMNYA)
+        // ================================================================
+
+        // Elemen UI
+        const container = document.getElementById('main-container');
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+
+        const playerNameSelect = document.getElementById('playerName');
+        const playerSchoolSelect = document.getElementById('playerSchool');
+        const levelButtons = document.querySelectorAll('.level-button');
+        const displayPlayerName = document.getElementById('displayPlayerName');
+        const displayPlayerSchool = document.getElementById('displayPlayerSchool');
+        const displaySelectedLevel = document.getElementById('displaySelectedLevel');
+        const timerDisplay = document.getElementById('timer');
+        const number1Display = document.getElementById('number1');
+        const number2Display = document.getElementById('number2');
+        const playerAnswerInput = document.getElementById('playerAnswer');
+        const submitAnswerButton = document.getElementById('submitAnswer');
+        const feedbackDisplay = document.getElementById('feedback');
+        const scoreDisplay = document.getElementById('score');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const finalPlayerNameDisplay = document.getElementById('finalPlayerName');
+        const finalPlayerSchoolDisplay = document.getElementById('finalPlayerSchool');
+        const finalSelectedLevelDisplay = document.getElementById('finalSelectedLevel');
+        const restartButton = document.getElementById('restartButton');
+
+        // Variabel Game
+        let playerName = '';
+        let playerSchool = '';
+        let selectedLevel = 0;
+        let score = 0;
+        let timer;
+        const FIXED_GAME_DURATION = 90;
+        let timeLeft = FIXED_GAME_DURATION;
+        let currentQuestion = { num1: 0, num2: 0 };
+        let allMultiplicationData = [];
+        let gameStartTime;
+        let currentQuestionIndex = 0;
+        let highestUnlockedLevel = 0;
+        let preloadedData = {};
+        let isChecking = false;
+
+        // ================================================================
+        // FUNGSI DEBUG
+        // ================================================================
+        function debugStructure() {
+            debugSpreadsheetStructure()
+                .then(result => {
+                    alert("Debug completed: " + JSON.stringify(result));
+                })
+                .catch(error => {
+                    alert("Debug error: " + error);
+                });
+        }
+
+        // ================================================================
+        // FUNGSI PRELOAD DATA
+        // ================================================================
+        function preloadGameData() {
+            preloadAllLevelsData()
+                .then(data => {
+                    preloadedData = data;
+                    console.log("Data semua level telah dipreload:", Object.keys(preloadedData));
+                })
+                .catch(error => {
+                    console.log("Preload data gagal, akan menggunakan metode normal:", error);
+                });
+        }
+
+        // ================================================================
+        // FUNGSI FETCH INITIAL DATA
+        // ================================================================
+        function fetchInitialData() {
+            getInitialData()
+                .then(data => {
+                    // Isi dropdown Nama
+                    playerNameSelect.innerHTML = '<option value="" selected> Pilih Nama </option>';
+                    if (data.names && data.names.length > 0) {
+                        data.names.forEach(name => {
+                            const option = document.createElement('option');
+                            option.value = name;
+                            option.textContent = name;
+                            playerNameSelect.appendChild(option);
+                        });
+                        playerNameSelect.disabled = false;
+                    } else {
+                        playerNameSelect.innerHTML += '<option value="">Tidak ada nama</option>';
+                        playerNameSelect.disabled = true;
+                    }
+
+                    // Isi dropdown Sekolah
+                    playerSchoolSelect.innerHTML = '<option value="" selected> Pilih Sekolah </option>';
+                    if (data.schools && data.schools.length > 0) {
+                        data.schools.forEach(school => {
+                            const option = document.createElement('option');
+                            option.value = school;
+                            option.textContent = school;
+                            playerSchoolSelect.appendChild(option);
+                        });
+                        playerSchoolSelect.disabled = false;
+                    } else {
+                        playerSchoolSelect.innerHTML += '<option value="">Tidak ada sekolah</option>';
+                        playerSchoolSelect.disabled = true;
+                    }
+
+                    loadUserProgress();
+                })
+                .catch(error => {
+                    console.error("Gagal memuat data awal:", error);
+                    alert("Gagal memuat daftar nama dan sekolah. Coba refresh halaman.");
+                });
+        }
+
+        // ================================================================
+        // FUNGSI FETCH SPREADSHEET DATA
+        // ================================================================
+        function fetchSpreadsheetDataFromAppsScript(level) {
+            allMultiplicationData = [];
+            feedbackDisplay.textContent = 'Memuat soal...';
+            submitAnswerButton.disabled = true;
+
+            getMultiplicationData(level)
+                .then(data => {
+                    allMultiplicationData = data;
+                    submitAnswerButton.disabled = false;
+
+                    if (allMultiplicationData.length === 0) {
+                        feedbackDisplay.textContent = "Tidak ada data perkalian yang ditemukan untuk level ini.";
+                        return;
+                    } else {
+                        console.log(`Data Level ${level} dimuat:`, allMultiplicationData.length, "soal");
+                        currentQuestionIndex = 0;
+                        loadNewQuestion();
+                        startTimer();
+                    }
+                    feedbackDisplay.textContent = '';
+                })
+                .catch(error => {
+                    console.error("Gagal mengambil data spreadsheet:", error);
+                    feedbackDisplay.textContent = "Gagal memuat soal. Cek koneksi dan coba lagi.";
+                    submitAnswerButton.disabled = false;
+                });
+        }
+
+        // ================================================================
+        // FUNGSI START GAME
+        // ================================================================
+        function startGameFast(level) {
+            playerName = playerNameSelect.value;
+            playerSchool = playerSchoolSelect.value;
+            selectedLevel = level;
+
+            if (!playerName || !playerSchool) {
+                showFeedback("Silakan pilih nama dan sekolah!", false);
+                return;
+            }
+
+            displayPlayerName.textContent = playerName;
+            displayPlayerSchool.textContent = playerSchool;
+            displaySelectedLevel.textContent = selectedLevel;
+            score = 0;
+            scoreDisplay.textContent = score;
+
+            startScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+            container.classList.add('game-active');
+
+            showFeedback('Memuat soal...', true);
+            playerAnswerInput.value = '';
+            gameStartTime = new Date().getTime();
+
+            if (preloadedData[selectedLevel] && preloadedData[selectedLevel].length > 0) {
+                allMultiplicationData = preloadedData[selectedLevel];
+                console.log(`Menggunakan data preload Level ${selectedLevel}:`, allMultiplicationData.length + " soal");
+                currentQuestionIndex = 0;
+                loadNewQuestion();
+                startTimer();
+                showFeedback('', true);
+            } else {
+                fetchSpreadsheetDataFromAppsScript(selectedLevel);
+            }
+        }
+
+        // ================================================================
+        // FUNGSI LOAD USER PROGRESS
+        // ================================================================
+        function loadUserProgress() {
+            const rawPlayerName = playerNameSelect.value;
+            const rawPlayerSchool = playerSchoolSelect.value;
+            const nameToPass = (rawPlayerName !== '') ? rawPlayerName : null;
+            const schoolToPass = (rawPlayerSchool !== '') ? rawPlayerSchool : null;
+
+            if (nameToPass && schoolToPass) {
+                getUserProgress(nameToPass, schoolToPass)
+                    .then(highestLevel => {
+                        highestUnlockedLevel = highestLevel;
+                        updateLevelButtons();
+                        console.log(`Client: Progress loaded. Highest Level: ${highestUnlockedLevel}`);
+                    })
+                    .catch(error => {
+                        console.error("Client: Gagal memuat progres:", error);
+                        highestUnlockedLevel = 0;
+                        updateLevelButtons();
+                    });
+            } else {
+                highestUnlockedLevel = 0;
+                updateLevelButtons();
+                console.log("Client: Nama/Sekolah belum dipilih. Level reset ke 0.");
+            }
+        }
+
+        function updateLevelButtons() {
+            levelButtons.forEach(button => {
+                const level = parseInt(button.dataset.level);
+                if (level <= (highestUnlockedLevel + 1)) {
+                    button.disabled = false;
+                } else {
+                    button.disabled = true;
+                }
+            });
+            console.log(`Client: Tombol level diupdate. Unlocked: ${highestUnlockedLevel}`);
+        }
+
+        // ================================================================
+        // FUNGSI GAME
+        // ================================================================
+        function loadNewQuestion() {
+            if (allMultiplicationData.length === 0) {
+                showFeedback("Tidak ada soal.", false);
+                return;
+            }
+            if (currentQuestionIndex >= allMultiplicationData.length) {
+                showFeedback("Semua soal telah selesai! Mengakhiri game.", true);
+                setTimeout(endGame, 1500);
+                return;
+            }
+
+            const selectedPair = allMultiplicationData[currentQuestionIndex];
+            currentQuestion.num1 = selectedPair[0];
+            currentQuestion.num2 = selectedPair[1];
+
+            number1Display.textContent = currentQuestion.num1;
+            number2Display.textContent = currentQuestion.num2;
+            playerAnswerInput.value = '';
+            showFeedback('', true);
+            focusAnswerInput();
+            currentQuestionIndex++;
+        }
+
+        function checkAnswerFast() {
+            if (isChecking) return;
+
+            const userAnswer = playerAnswerInput.value;
+
+            if (userAnswer === '') {
+                showFeedback("Masukkan jawaban Anda!", false);
+                return;
+            }
+
+            const userAnswerFloat = parseFloat(userAnswer.replace(',', '.'));
+
+            if (isNaN(userAnswerFloat)) {
+                showFeedback("Masukkan angka yang valid!", false);
+                return;
+            }
+
+            isChecking = true;
+            submitAnswerButton.disabled = true;
+            showFeedback("Memeriksa...", true);
+
+            setTimeout(() => {
+                const correctAnswer = currentQuestion.num1 * currentQuestion.num2;
+                const isCorrect = (userAnswerFloat == correctAnswer);
+
+                if (isCorrect) {
+                    score += 1;
+                    scoreDisplay.textContent = score;
+                    showFeedback("Benar! ✓", true);
+                } else {
+                    showFeedback(`Salah! Jawaban: ${correctAnswer}`, false);
+                }
+
+                isChecking = false;
+                submitAnswerButton.disabled = false;
+
+                setTimeout(() => {
+                    loadNewQuestion();
+                }, 800);
+            }, 100);
+        }
+
+        function showFeedback(message, isCorrect) {
+            feedbackDisplay.textContent = message;
+            if (message === '') {
+                feedbackDisplay.className = 'feedback';
+            } else {
+                feedbackDisplay.className = isCorrect ? 'feedback correct' : 'feedback incorrect';
+            }
+
+            if (isCorrect && message !== '' && message !== 'Memuat soal...' && message !== 'Memeriksa...') {
+                setTimeout(() => {
+                    if (feedbackDisplay.textContent === message) {
+                        feedbackDisplay.textContent = '';
+                        feedbackDisplay.className = 'feedback';
+                    }
+                }, 1500);
+            }
+        }
+
+        function focusAnswerInput() {
+            setTimeout(() => {
+                playerAnswerInput.focus();
+            }, 100);
+        }
+
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = FIXED_GAME_DURATION;
+            updateTimerDisplay();
+
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function endGame() {
+            clearInterval(timer);
+
+            gameScreen.classList.remove('active');
+            endScreen.classList.add('active');
+            container.classList.remove('game-active');
+
+            finalScoreDisplay.textContent = score;
+            finalPlayerNameDisplay.textContent = playerName;
+            finalPlayerSchoolDisplay.textContent = playerSchool;
+            finalSelectedLevelDisplay.textContent = selectedLevel;
+            const totalTimeSpent = Math.floor((new Date().getTime() - gameStartTime) / 1000);
+
+            saveUserResult({
+                name: playerName,
+                school: playerSchool,
+                score: score,
+                timeSpent: totalTimeSpent,
+                selectedLevel: selectedLevel
+            })
+            .then(() => {
+                console.log("Hasil disimpan.");
+                loadUserProgress();
+            })
+            .catch(error => {
+                console.error("Gagal menyimpan hasil:", error);
+                alert("Gagal menyimpan hasil game.");
+                loadUserProgress();
+            });
+        }
+
+        function restartGame() {
+            endScreen.classList.remove('active');
+            startScreen.classList.add('active');
+            container.classList.remove('game-active');
+
+            playerNameSelect.selectedIndex = 0;
+            playerSchoolSelect.selectedIndex = 0;
+            playerAnswerInput.value = '';
+            playerName = '';
+            playerSchool = '';
+            selectedLevel = 0;
+            score = 0;
+            showFeedback('', true);
+            clearInterval(timer);
+            timeLeft = FIXED_GAME_DURATION;
+            updateTimerDisplay();
+            fetchInitialData();
+            currentQuestionIndex = 0;
+        }
+
+        // ================================================================
+        // EVENT LISTENERS
+        // ================================================================
+        const keypadContainer = document.getElementById('keypad-container');
+        keypadContainer.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!target.matches('.keypad-btn')) return;
+
+            const key = target.dataset.key;
+            let currentValue = playerAnswerInput.value;
+
+            if (key === 'C') {
+                playerAnswerInput.value = '';
+            } else if (key === 'Backspace') {
+                playerAnswerInput.value = currentValue.slice(0, -1);
+            } else {
+                playerAnswerInput.value = currentValue + key;
+            }
+        });
+
+        levelButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const level = parseInt(button.dataset.level);
+                startGameFast(level);
+            });
+        });
+
+        submitAnswerButton.addEventListener('click', checkAnswerFast);
+        restartButton.addEventListener('click', restartGame);
+        playerNameSelect.addEventListener('change', loadUserProgress);
+        playerSchoolSelect.addEventListener('change', loadUserProgress);
+
+        // ================================================================
+        // INISIALISASI
+        // ================================================================
+        window.onload = () => {
+            updateTimerDisplay();
+            fetchInitialData();
+            preloadGameData();
+        };
+    </script>
+</body>
+</html>
