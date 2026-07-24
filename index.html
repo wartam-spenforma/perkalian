@@ -5,7 +5,7 @@
 <title>Hitung Cepat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    /* ===== SEMUA CSS SAMA SEPERTI SEBELUMNYA ===== */
+    /* ===== SEMUA CSS SAMA ===== */
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         display: flex;
@@ -380,6 +380,29 @@
         background-color: #e68900;
     }
     
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8em;
+        margin-left: 10px;
+    }
+    
+    .status-badge.success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-badge.loading {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
     @media (max-width: 850px) {
         .container.game-active {
             max-width: 500px;
@@ -425,6 +448,11 @@
         <h1>TERAMPIL BERHITUNG</h1>
         <h2>Hitung Cepat, Pasti Hebat!</h2>
 
+        <!-- Status Koneksi -->
+        <div id="connection-status" style="margin-bottom: 10px; font-size: 0.9em;">
+            Status: <span id="status-text" class="status-badge loading">Memuat...</span>
+        </div>
+
         <div id="start-screen" class="screen active">
             <label for="playerName">Nama</label>
             <select id="playerName">
@@ -437,6 +465,7 @@
             </select>
 
             <div style="text-align: center;">
+                <button class="debug-button" onclick="testConnection()">Test Koneksi</button>
                 <button class="debug-button" onclick="debugStructure()">Debug Structure</button>
             </div>
 
@@ -514,89 +543,105 @@
         // [PENTING] URL Web App Google Apps Script
         // GANTI DENGAN URL WEB APP ANDA SETELAH DEPLOY
         // ================================================================
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwTM1HwJgXOGnoHFKTDaFMfS_c464By5jNMNv-kErKQFH6tDeHBU4WO3IoyoFCo2FNfog/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzD8k8_7o7HyBz1QT6W7_yz-1t3wZ-R3kC_dZ1j7T64go5vjVlO3Ew6cRgh6bO_6Blu/exec';
 
         // ================================================================
-        // FUNGSI UTAMA UNTUK MEMANGGIL WEB APP
+        // FUNGSI UTAMA UNTUK MEMANGGIL WEB APP (Versi dengan Callback)
         // ================================================================
-        function callWebApp(functionName, params = {}) {
-            return new Promise((resolve, reject) => {
-                const payload = {
-                    function: functionName,
-                    params: params
-                };
+        function callWebApp(functionName, params = {}, callback) {
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = 'Mengirim...';
+            statusText.className = 'status-badge loading';
+            
+            const payload = {
+                function: functionName,
+                params: params
+            };
+            
+            // Kirim sebagai POST dengan form data
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(payload));
+            
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP Error: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(result => {
+                statusText.textContent = 'Tersambung';
+                statusText.className = 'status-badge success';
+                
+                if (result.success) {
+                    callback(null, result.data);
+                } else {
+                    callback(new Error(result.error || 'Unknown error'), null);
+                }
+            })
+            .catch(error => {
+                statusText.textContent = 'Error: ' + error.message;
+                statusText.className = 'status-badge error';
+                callback(error, null);
+            });
+        }
 
-                fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Penting untuk Apps Script
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        data: JSON.stringify(payload)
-                    })
-                })
-                .then(response => {
-                    // Karena mode: 'no-cors', kita tidak bisa membaca response langsung
-                    // Kita perlu menggunakan pendekatan alternatif
-                    return response.text();
-                })
-                .then(text => {
-                    try {
-                        const result = JSON.parse(text);
-                        if (result.error) {
-                            reject(new Error(result.error));
-                        } else {
-                            resolve(result.data);
-                        }
-                    } catch (e) {
-                        // Jika response bukan JSON, mungkin karena mode no-cors
-                        // Kita perlu menggunakan pendekatan dengan JSONP atau redirect
-                        reject(new Error('Gagal memproses response: ' + text));
-                    }
-                })
-                .catch(error => {
-                    reject(error);
-                });
+        // ================================================================
+        // FUNGSI TEST KONEKSI
+        // ================================================================
+        function testConnection() {
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = 'Testing...';
+            statusText.className = 'status-badge loading';
+            
+            fetch(WEB_APP_URL, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(result => {
+                statusText.textContent = 'Connected!';
+                statusText.className = 'status-badge success';
+                alert('Koneksi berhasil!\nResponse: ' + JSON.stringify(result, null, 2));
+            })
+            .catch(error => {
+                statusText.textContent = 'Gagal: ' + error.message;
+                statusText.className = 'status-badge error';
+                alert('Gagal koneksi: ' + error.message + '\n\nCek URL Web App Anda.');
             });
         }
 
         // ================================================================
         // FUNGSI WRAPPER UNTUK SETIAP FUNGSI BACKEND
         // ================================================================
-
-        // 1. Get Initial Data
-        function getInitialData() {
-            return callWebApp('getInitialData', {});
+        function getInitialData(callback) {
+            callWebApp('getInitialData', {}, callback);
         }
 
-        // 2. Preload All Levels Data
-        function preloadAllLevelsData() {
-            return callWebApp('preloadAllLevelsData', {});
+        function preloadAllLevelsData(callback) {
+            callWebApp('preloadAllLevelsData', {}, callback);
         }
 
-        // 3. Get Multiplication Data
-        function getMultiplicationData(level) {
-            return callWebApp('getMultiplicationData', { level: level });
+        function getMultiplicationData(level, callback) {
+            callWebApp('getMultiplicationData', { level: level }, callback);
         }
 
-        // 4. Get User Progress
-        function getUserProgress(name, school) {
-            return callWebApp('getUserProgress', { name: name, school: school });
+        function getUserProgress(name, school, callback) {
+            callWebApp('getUserProgress', { name: name, school: school }, callback);
         }
 
-        // 5. Save User Result
-        function saveUserResult(resultData) {
-            return callWebApp('saveUserResult', { resultData: resultData });
+        function saveUserResult(resultData, callback) {
+            callWebApp('saveUserResult', { resultData: resultData }, callback);
         }
 
-        // 6. Debug Structure
-        function debugSpreadsheetStructure() {
-            return callWebApp('debugSpreadsheetStructure', {});
+        function debugSpreadsheetStructure(callback) {
+            callWebApp('debugSpreadsheetStructure', {}, callback);
         }
 
         // ================================================================
-        // KODE APLIKASI UTAMA (SAMA SEPERTI SEBELUMNYA)
+        // KODE APLIKASI UTAMA
         // ================================================================
 
         // Elemen UI
@@ -644,71 +689,72 @@
         // FUNGSI DEBUG
         // ================================================================
         function debugStructure() {
-            debugSpreadsheetStructure()
-                .then(result => {
-                    alert("Debug completed: " + JSON.stringify(result));
-                })
-                .catch(error => {
-                    alert("Debug error: " + error);
-                });
+            debugSpreadsheetStructure((error, result) => {
+                if (error) {
+                    alert('Debug error: ' + error.message);
+                } else {
+                    alert('Debug completed:\n' + JSON.stringify(result, null, 2));
+                }
+            });
         }
 
         // ================================================================
         // FUNGSI PRELOAD DATA
         // ================================================================
         function preloadGameData() {
-            preloadAllLevelsData()
-                .then(data => {
+            preloadAllLevelsData((error, data) => {
+                if (error) {
+                    console.log('Preload data gagal:', error);
+                } else {
                     preloadedData = data;
-                    console.log("Data semua level telah dipreload:", Object.keys(preloadedData));
-                })
-                .catch(error => {
-                    console.log("Preload data gagal, akan menggunakan metode normal:", error);
-                });
+                    console.log('Data semua level telah dipreload:', Object.keys(preloadedData));
+                }
+            });
         }
 
         // ================================================================
         // FUNGSI FETCH INITIAL DATA
         // ================================================================
         function fetchInitialData() {
-            getInitialData()
-                .then(data => {
-                    // Isi dropdown Nama
-                    playerNameSelect.innerHTML = '<option value="" selected> Pilih Nama </option>';
-                    if (data.names && data.names.length > 0) {
-                        data.names.forEach(name => {
-                            const option = document.createElement('option');
-                            option.value = name;
-                            option.textContent = name;
-                            playerNameSelect.appendChild(option);
-                        });
-                        playerNameSelect.disabled = false;
-                    } else {
-                        playerNameSelect.innerHTML += '<option value="">Tidak ada nama</option>';
-                        playerNameSelect.disabled = true;
-                    }
+            getInitialData((error, data) => {
+                if (error) {
+                    console.error('Gagal memuat data awal:', error);
+                    alert('Gagal memuat daftar nama dan sekolah.\nError: ' + error.message);
+                    return;
+                }
 
-                    // Isi dropdown Sekolah
-                    playerSchoolSelect.innerHTML = '<option value="" selected> Pilih Sekolah </option>';
-                    if (data.schools && data.schools.length > 0) {
-                        data.schools.forEach(school => {
-                            const option = document.createElement('option');
-                            option.value = school;
-                            option.textContent = school;
-                            playerSchoolSelect.appendChild(option);
-                        });
-                        playerSchoolSelect.disabled = false;
-                    } else {
-                        playerSchoolSelect.innerHTML += '<option value="">Tidak ada sekolah</option>';
-                        playerSchoolSelect.disabled = true;
-                    }
+                // Isi dropdown Nama
+                playerNameSelect.innerHTML = '<option value="" selected> Pilih Nama </option>';
+                if (data.names && data.names.length > 0) {
+                    data.names.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        playerNameSelect.appendChild(option);
+                    });
+                    playerNameSelect.disabled = false;
+                } else {
+                    playerNameSelect.innerHTML += '<option value="">Tidak ada nama</option>';
+                    playerNameSelect.disabled = true;
+                }
 
-                    loadUserProgress();
-                })
-                .catch(error => {
-                    console.error("Gagal memuat data awal:", error);
-                    alert("Gagal memuat daftar nama dan sekolah. Coba refresh halaman.");
-                });
+                // Isi dropdown Sekolah
+                playerSchoolSelect.innerHTML = '<option value="" selected> Pilih Sekolah </option>';
+                if (data.schools && data.schools.length > 0) {
+                    data.schools.forEach(school => {
+                        const option = document.createElement('option');
+                        option.value = school;
+                        option.textContent = school;
+                        playerSchoolSelect.appendChild(option);
+                    });
+                    playerSchoolSelect.disabled = false;
+                } else {
+                    playerSchoolSelect.innerHTML += '<option value="">Tidak ada sekolah</option>';
+                    playerSchoolSelect.disabled = true;
+                }
+
+                loadUserProgress();
+            });
         }
 
         // ================================================================
@@ -719,27 +765,28 @@
             feedbackDisplay.textContent = 'Memuat soal...';
             submitAnswerButton.disabled = true;
 
-            getMultiplicationData(level)
-                .then(data => {
-                    allMultiplicationData = data;
+            getMultiplicationData(level, (error, data) => {
+                if (error) {
+                    console.error('Gagal mengambil data spreadsheet:', error);
+                    feedbackDisplay.textContent = 'Gagal memuat soal: ' + error.message;
                     submitAnswerButton.disabled = false;
+                    return;
+                }
 
-                    if (allMultiplicationData.length === 0) {
-                        feedbackDisplay.textContent = "Tidak ada data perkalian yang ditemukan untuk level ini.";
-                        return;
-                    } else {
-                        console.log(`Data Level ${level} dimuat:`, allMultiplicationData.length, "soal");
-                        currentQuestionIndex = 0;
-                        loadNewQuestion();
-                        startTimer();
-                    }
-                    feedbackDisplay.textContent = '';
-                })
-                .catch(error => {
-                    console.error("Gagal mengambil data spreadsheet:", error);
-                    feedbackDisplay.textContent = "Gagal memuat soal. Cek koneksi dan coba lagi.";
-                    submitAnswerButton.disabled = false;
-                });
+                allMultiplicationData = data;
+                submitAnswerButton.disabled = false;
+
+                if (allMultiplicationData.length === 0) {
+                    feedbackDisplay.textContent = 'Tidak ada data perkalian untuk level ini.';
+                    return;
+                }
+
+                console.log(`Data Level ${level} dimuat:`, allMultiplicationData.length, 'soal');
+                currentQuestionIndex = 0;
+                loadNewQuestion();
+                startTimer();
+                feedbackDisplay.textContent = '';
+            });
         }
 
         // ================================================================
@@ -751,7 +798,7 @@
             selectedLevel = level;
 
             if (!playerName || !playerSchool) {
-                showFeedback("Silakan pilih nama dan sekolah!", false);
+                showFeedback('Silakan pilih nama dan sekolah!', false);
                 return;
             }
 
@@ -769,9 +816,10 @@
             playerAnswerInput.value = '';
             gameStartTime = new Date().getTime();
 
+            // Coba gunakan data preload
             if (preloadedData[selectedLevel] && preloadedData[selectedLevel].length > 0) {
                 allMultiplicationData = preloadedData[selectedLevel];
-                console.log(`Menggunakan data preload Level ${selectedLevel}:`, allMultiplicationData.length + " soal");
+                console.log(`Menggunakan data preload Level ${selectedLevel}:`, allMultiplicationData.length + ' soal');
                 currentQuestionIndex = 0;
                 loadNewQuestion();
                 startTimer();
@@ -787,38 +835,33 @@
         function loadUserProgress() {
             const rawPlayerName = playerNameSelect.value;
             const rawPlayerSchool = playerSchoolSelect.value;
-            const nameToPass = (rawPlayerName !== '') ? rawPlayerName : null;
-            const schoolToPass = (rawPlayerSchool !== '') ? rawPlayerSchool : null;
+            const nameToPass = rawPlayerName || null;
+            const schoolToPass = rawPlayerSchool || null;
 
             if (nameToPass && schoolToPass) {
-                getUserProgress(nameToPass, schoolToPass)
-                    .then(highestLevel => {
-                        highestUnlockedLevel = highestLevel;
-                        updateLevelButtons();
-                        console.log(`Client: Progress loaded. Highest Level: ${highestUnlockedLevel}`);
-                    })
-                    .catch(error => {
-                        console.error("Client: Gagal memuat progres:", error);
+                getUserProgress(nameToPass, schoolToPass, (error, highestLevel) => {
+                    if (error) {
+                        console.error('Gagal memuat progres:', error);
                         highestUnlockedLevel = 0;
-                        updateLevelButtons();
-                    });
+                    } else {
+                        highestUnlockedLevel = highestLevel || 0;
+                    }
+                    updateLevelButtons();
+                    console.log('Progress loaded. Highest Level:', highestUnlockedLevel);
+                });
             } else {
                 highestUnlockedLevel = 0;
                 updateLevelButtons();
-                console.log("Client: Nama/Sekolah belum dipilih. Level reset ke 0.");
+                console.log('Nama/Sekolah belum dipilih. Level reset ke 0.');
             }
         }
 
         function updateLevelButtons() {
             levelButtons.forEach(button => {
                 const level = parseInt(button.dataset.level);
-                if (level <= (highestUnlockedLevel + 1)) {
-                    button.disabled = false;
-                } else {
-                    button.disabled = true;
-                }
+                button.disabled = level > (highestUnlockedLevel + 1);
             });
-            console.log(`Client: Tombol level diupdate. Unlocked: ${highestUnlockedLevel}`);
+            console.log('Tombol level diupdate. Unlocked:', highestUnlockedLevel);
         }
 
         // ================================================================
@@ -826,11 +869,11 @@
         // ================================================================
         function loadNewQuestion() {
             if (allMultiplicationData.length === 0) {
-                showFeedback("Tidak ada soal.", false);
+                showFeedback('Tidak ada soal.', false);
                 return;
             }
             if (currentQuestionIndex >= allMultiplicationData.length) {
-                showFeedback("Semua soal telah selesai! Mengakhiri game.", true);
+                showFeedback('Semua soal telah selesai! Mengakhiri game.', true);
                 setTimeout(endGame, 1500);
                 return;
             }
@@ -853,20 +896,20 @@
             const userAnswer = playerAnswerInput.value;
 
             if (userAnswer === '') {
-                showFeedback("Masukkan jawaban Anda!", false);
+                showFeedback('Masukkan jawaban Anda!', false);
                 return;
             }
 
             const userAnswerFloat = parseFloat(userAnswer.replace(',', '.'));
 
             if (isNaN(userAnswerFloat)) {
-                showFeedback("Masukkan angka yang valid!", false);
+                showFeedback('Masukkan angka yang valid!', false);
                 return;
             }
 
             isChecking = true;
             submitAnswerButton.disabled = true;
-            showFeedback("Memeriksa...", true);
+            showFeedback('Memeriksa...', true);
 
             setTimeout(() => {
                 const correctAnswer = currentQuestion.num1 * currentQuestion.num2;
@@ -875,7 +918,7 @@
                 if (isCorrect) {
                     score += 1;
                     scoreDisplay.textContent = score;
-                    showFeedback("Benar! ✓", true);
+                    showFeedback('Benar! ✓', true);
                 } else {
                     showFeedback(`Salah! Jawaban: ${correctAnswer}`, false);
                 }
@@ -953,14 +996,13 @@
                 score: score,
                 timeSpent: totalTimeSpent,
                 selectedLevel: selectedLevel
-            })
-            .then(() => {
-                console.log("Hasil disimpan.");
-                loadUserProgress();
-            })
-            .catch(error => {
-                console.error("Gagal menyimpan hasil:", error);
-                alert("Gagal menyimpan hasil game.");
+            }, (error, result) => {
+                if (error) {
+                    console.error('Gagal menyimpan hasil:', error);
+                    alert('Gagal menyimpan hasil game.');
+                } else {
+                    console.log('Hasil disimpan.');
+                }
                 loadUserProgress();
             });
         }
@@ -1022,8 +1064,26 @@
         // ================================================================
         window.onload = () => {
             updateTimerDisplay();
-            fetchInitialData();
-            preloadGameData();
+            
+            // Test koneksi dulu
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = 'Menguji koneksi...';
+            statusText.className = 'status-badge loading';
+            
+            fetch(WEB_APP_URL, { method: 'GET' })
+                .then(response => response.json())
+                .then(() => {
+                    statusText.textContent = 'Tersambung';
+                    statusText.className = 'status-badge success';
+                    // Load data setelah koneksi berhasil
+                    fetchInitialData();
+                    preloadGameData();
+                })
+                .catch(error => {
+                    statusText.textContent = 'Gagal: ' + error.message;
+                    statusText.className = 'status-badge error';
+                    alert('Tidak dapat terhubung ke server.\nPastikan URL Web App benar dan sudah dideploy.\n\nError: ' + error.message);
+                });
         };
     </script>
 </body>
