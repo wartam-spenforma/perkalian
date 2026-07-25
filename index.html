@@ -467,7 +467,7 @@
 
             <div style="text-align: center;">
                 <button class="debug-button" onclick="testConnection()">Test Koneksi</button>
-                <button class="debug-button" onclick="debugStructure()">Debug Structure</button>
+                <button class="debug-button" onclick="debugStructure()" style="display: none;">Debug Structure</button>
             </div>
 
             <label>Pilih Level</label>
@@ -710,6 +710,17 @@
         let preloadedData = {};
         let isChecking = false;
 
+        // Peta/Relasi antara Nama dan Sekolah dari Database
+        let studentSchoolMap = {}; // { "Ahmad Zaini": "SMP Negeri 4 Majenang", ... }
+
+        // Helper untuk ekstrak teks murni jika data bertipe Array 2D
+        function parseCleanString(item) {
+            if (Array.isArray(item)) {
+                return item[0] ? String(item[0]).trim() : '';
+            }
+            return item ? String(item).trim() : '';
+        }
+
         // ================================================================
         // FUNGSI DEBUG
         // ================================================================
@@ -738,15 +749,58 @@
         }
 
         // ================================================================
-        // FUNGSI FETCH INITIAL DATA
+        // FUNGSI FETCH INITIAL DATA (DENGAN SINKRONISASI NAMA-SEKOLAH)
         // ================================================================
         function fetchInitialData() {
             getInitialData()
                 .then(data => {
-                    // Isi dropdown Nama
+                    studentSchoolMap = {};
+                    
+                    // Ekstrak list nama & sekolah
+                    let namesList = [];
+                    let schoolsList = [];
+
+                    if (data.students && Array.isArray(data.students)) {
+                        // Jika backend mengembalikan pasangan [{name, school}, ...] atau [[nama, sekolah], ...]
+                        data.students.forEach(item => {
+                            const n = parseCleanString(Array.isArray(item) ? item[0] : item.name);
+                            const s = parseCleanString(Array.isArray(item) ? item[1] : item.school);
+                            if (n) {
+                                namesList.push(n);
+                                studentSchoolMap[n] = s;
+                            }
+                            if (s && !schoolsList.includes(s)) {
+                                schoolsList.push(s);
+                            }
+                        });
+                    } else {
+                        // Jika backend mengembalikan object { names: [...], schools: [...] }
+                        const rawNames = data.names || [];
+                        const rawSchools = data.schools || [];
+
+                        rawNames.forEach((item, index) => {
+                            const nameStr = parseCleanString(item);
+                            const schoolStr = parseCleanString(rawSchools[index]);
+                            if (nameStr) {
+                                namesList.push(nameStr);
+                                if (schoolStr) {
+                                    studentSchoolMap[nameStr] = schoolStr;
+                                }
+                            }
+                        });
+
+                        rawSchools.forEach(item => {
+                            const schoolStr = parseCleanString(item);
+                            if (schoolStr && !schoolsList.includes(schoolStr)) {
+                                schoolsList.push(schoolStr);
+                            }
+                        });
+                    }
+
+                    // Populate Dropdown Nama
                     playerNameSelect.innerHTML = '<option value="" selected> Pilih Nama </option>';
-                    if (data.names && data.names.length > 0) {
-                        data.names.forEach(name => {
+                    if (namesList.length > 0) {
+                        namesList.forEach(name => {
                             const option = document.createElement('option');
                             option.value = name;
                             option.textContent = name;
@@ -758,10 +812,10 @@
                         playerNameSelect.disabled = true;
                     }
 
-                    // Isi dropdown Sekolah
+                    // Populate Dropdown Sekolah
                     playerSchoolSelect.innerHTML = '<option value="" selected> Pilih Sekolah </option>';
-                    if (data.schools && data.schools.length > 0) {
-                        data.schools.forEach(school => {
+                    if (schoolsList.length > 0) {
+                        schoolsList.forEach(school => {
                             const option = document.createElement('option');
                             option.value = school;
                             option.textContent = school;
@@ -1053,8 +1107,28 @@
         }
 
         // ================================================================
-        // EVENT LISTENERS
+        // EVENT LISTENERS & SINKRONISASI DROPDOWN
         // ================================================================
+        
+        // Otomatis set Sekolah ketika Nama dipilih
+        playerNameSelect.addEventListener('change', () => {
+            const selectedName = playerNameSelect.value;
+            if (selectedName && studentSchoolMap[selectedName]) {
+                const targetSchool = studentSchoolMap[selectedName];
+                
+                // Cari opsi sekolah yang cocok
+                for (let i = 0; i < playerSchoolSelect.options.length; i++) {
+                    if (playerSchoolSelect.options[i].value === targetSchool) {
+                        playerSchoolSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            loadUserProgress();
+        });
+
+        playerSchoolSelect.addEventListener('change', loadUserProgress);
+
         const keypadContainer = document.getElementById('keypad-container');
         keypadContainer.addEventListener('click', (event) => {
             const target = event.target;
@@ -1081,8 +1155,6 @@
 
         submitAnswerButton.addEventListener('click', checkAnswerFast);
         restartButton.addEventListener('click', restartGame);
-        playerNameSelect.addEventListener('change', loadUserProgress);
-        playerSchoolSelect.addEventListener('change', loadUserProgress);
 
         // ================================================================
         // INISIALISASI
