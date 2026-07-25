@@ -5,7 +5,7 @@
 <title>Hitung Cepat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    /* ===== SEMUA CSS SAMA ===== */
+    /* ===== SEMUA CSS SAMA SEPERTI SEBELUMNYA ===== */
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         display: flex;
@@ -546,46 +546,50 @@
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwTM1HwJgXOGnoHFKTDaFMfS_c464By5jNMNv-kErKQFH6tDeHBU4WO3IoyoFCo2FNfog/exec';
 
         // ================================================================
-        // FUNGSI UTAMA UNTUK MEMANGGIL WEB APP (Versi dengan Callback)
+        // FUNGSI JSONP - Cara paling reliable untuk mengatasi CORS
         // ================================================================
-        function callWebApp(functionName, params = {}, callback) {
-            const statusText = document.getElementById('status-text');
-            statusText.textContent = 'Mengirim...';
-            statusText.className = 'status-badge loading';
-            
-            const payload = {
-                function: functionName,
-                params: params
-            };
-            
-            // Kirim sebagai POST dengan form data
-            const formData = new FormData();
-            formData.append('data', JSON.stringify(payload));
-            
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('HTTP Error: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(result => {
-                statusText.textContent = 'Tersambung';
-                statusText.className = 'status-badge success';
+        let jsonpCounter = 0;
+
+        function jsonpRequest(functionName, params = {}) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+                const script = document.createElement('script');
                 
-                if (result.success) {
-                    callback(null, result.data);
-                } else {
-                    callback(new Error(result.error || 'Unknown error'), null);
-                }
-            })
-            .catch(error => {
-                statusText.textContent = 'Error: ' + error.message;
-                statusText.className = 'status-badge error';
-                callback(error, null);
+                // Buat URL dengan parameter
+                const url = new URL(WEB_APP_URL);
+                url.searchParams.append('function', functionName);
+                url.searchParams.append('params', JSON.stringify(params));
+                url.searchParams.append('callback', callbackName);
+                
+                // Definisikan callback global
+                window[callbackName] = function(response) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    
+                    if (response.success) {
+                        resolve(response.data);
+                    } else {
+                        reject(new Error(response.error || 'Unknown error'));
+                    }
+                };
+                
+                // Set timeout untuk error
+                const timeout = setTimeout(() => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('Request timeout'));
+                }, 30000);
+                
+                // Load script
+                script.src = url.toString();
+                script.onerror = function() {
+                    clearTimeout(timeout);
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('Failed to load script'));
+                };
+                
+                document.body.appendChild(script);
             });
         }
 
@@ -597,47 +601,67 @@
             statusText.textContent = 'Testing...';
             statusText.className = 'status-badge loading';
             
-            fetch(WEB_APP_URL, {
-                method: 'GET'
-            })
-            .then(response => response.json())
-            .then(result => {
-                statusText.textContent = 'Connected!';
+            // Test dengan JSONP tanpa function
+            const callbackName = 'test_callback_' + Date.now();
+            const script = document.createElement('script');
+            const url = new URL(WEB_APP_URL);
+            url.searchParams.append('callback', callbackName);
+            
+            window[callbackName] = function(response) {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                
+                statusText.textContent = 'Tersambung!';
                 statusText.className = 'status-badge success';
-                alert('Koneksi berhasil!\nResponse: ' + JSON.stringify(result, null, 2));
-            })
-            .catch(error => {
-                statusText.textContent = 'Gagal: ' + error.message;
+                alert('Koneksi berhasil!\nResponse: ' + JSON.stringify(response, null, 2));
+            };
+            
+            const timeout = setTimeout(() => {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                statusText.textContent = 'Timeout!';
                 statusText.className = 'status-badge error';
-                alert('Gagal koneksi: ' + error.message + '\n\nCek URL Web App Anda.');
-            });
+                alert('Koneksi timeout. Cek URL Web App Anda.');
+            }, 10000);
+            
+            script.src = url.toString();
+            script.onerror = function() {
+                clearTimeout(timeout);
+                delete window[callbackName];
+                document.body.removeChild(script);
+                statusText.textContent = 'Gagal!';
+                statusText.className = 'status-badge error';
+                alert('Gagal koneksi. Pastikan URL Web App benar.');
+            };
+            
+            document.body.appendChild(script);
         }
 
         // ================================================================
         // FUNGSI WRAPPER UNTUK SETIAP FUNGSI BACKEND
         // ================================================================
-        function getInitialData(callback) {
-            callWebApp('getInitialData', {}, callback);
+        function getInitialData() {
+            return jsonpRequest('getInitialData', {});
         }
 
-        function preloadAllLevelsData(callback) {
-            callWebApp('preloadAllLevelsData', {}, callback);
+        function preloadAllLevelsData() {
+            return jsonpRequest('preloadAllLevelsData', {});
         }
 
-        function getMultiplicationData(level, callback) {
-            callWebApp('getMultiplicationData', { level: level }, callback);
+        function getMultiplicationData(level) {
+            return jsonpRequest('getMultiplicationData', { level: level });
         }
 
-        function getUserProgress(name, school, callback) {
-            callWebApp('getUserProgress', { name: name, school: school }, callback);
+        function getUserProgress(name, school) {
+            return jsonpRequest('getUserProgress', { name: name, school: school });
         }
 
-        function saveUserResult(resultData, callback) {
-            callWebApp('saveUserResult', { resultData: resultData }, callback);
+        function saveUserResult(resultData) {
+            return jsonpRequest('saveUserResult', { resultData: resultData });
         }
 
-        function debugSpreadsheetStructure(callback) {
-            callWebApp('debugSpreadsheetStructure', {}, callback);
+        function debugSpreadsheetStructure() {
+            return jsonpRequest('debugSpreadsheetStructure', {});
         }
 
         // ================================================================
@@ -689,72 +713,71 @@
         // FUNGSI DEBUG
         // ================================================================
         function debugStructure() {
-            debugSpreadsheetStructure((error, result) => {
-                if (error) {
-                    alert('Debug error: ' + error.message);
-                } else {
+            debugSpreadsheetStructure()
+                .then(result => {
                     alert('Debug completed:\n' + JSON.stringify(result, null, 2));
-                }
-            });
+                })
+                .catch(error => {
+                    alert('Debug error: ' + error.message);
+                });
         }
 
         // ================================================================
         // FUNGSI PRELOAD DATA
         // ================================================================
         function preloadGameData() {
-            preloadAllLevelsData((error, data) => {
-                if (error) {
-                    console.log('Preload data gagal:', error);
-                } else {
+            preloadAllLevelsData()
+                .then(data => {
                     preloadedData = data;
                     console.log('Data semua level telah dipreload:', Object.keys(preloadedData));
-                }
-            });
+                })
+                .catch(error => {
+                    console.log('Preload data gagal:', error);
+                });
         }
 
         // ================================================================
         // FUNGSI FETCH INITIAL DATA
         // ================================================================
         function fetchInitialData() {
-            getInitialData((error, data) => {
-                if (error) {
+            getInitialData()
+                .then(data => {
+                    // Isi dropdown Nama
+                    playerNameSelect.innerHTML = '<option value="" selected> Pilih Nama </option>';
+                    if (data.names && data.names.length > 0) {
+                        data.names.forEach(name => {
+                            const option = document.createElement('option');
+                            option.value = name;
+                            option.textContent = name;
+                            playerNameSelect.appendChild(option);
+                        });
+                        playerNameSelect.disabled = false;
+                    } else {
+                        playerNameSelect.innerHTML += '<option value="">Tidak ada nama</option>';
+                        playerNameSelect.disabled = true;
+                    }
+
+                    // Isi dropdown Sekolah
+                    playerSchoolSelect.innerHTML = '<option value="" selected> Pilih Sekolah </option>';
+                    if (data.schools && data.schools.length > 0) {
+                        data.schools.forEach(school => {
+                            const option = document.createElement('option');
+                            option.value = school;
+                            option.textContent = school;
+                            playerSchoolSelect.appendChild(option);
+                        });
+                        playerSchoolSelect.disabled = false;
+                    } else {
+                        playerSchoolSelect.innerHTML += '<option value="">Tidak ada sekolah</option>';
+                        playerSchoolSelect.disabled = true;
+                    }
+
+                    loadUserProgress();
+                })
+                .catch(error => {
                     console.error('Gagal memuat data awal:', error);
                     alert('Gagal memuat daftar nama dan sekolah.\nError: ' + error.message);
-                    return;
-                }
-
-                // Isi dropdown Nama
-                playerNameSelect.innerHTML = '<option value="" selected> Pilih Nama </option>';
-                if (data.names && data.names.length > 0) {
-                    data.names.forEach(name => {
-                        const option = document.createElement('option');
-                        option.value = name;
-                        option.textContent = name;
-                        playerNameSelect.appendChild(option);
-                    });
-                    playerNameSelect.disabled = false;
-                } else {
-                    playerNameSelect.innerHTML += '<option value="">Tidak ada nama</option>';
-                    playerNameSelect.disabled = true;
-                }
-
-                // Isi dropdown Sekolah
-                playerSchoolSelect.innerHTML = '<option value="" selected> Pilih Sekolah </option>';
-                if (data.schools && data.schools.length > 0) {
-                    data.schools.forEach(school => {
-                        const option = document.createElement('option');
-                        option.value = school;
-                        option.textContent = school;
-                        playerSchoolSelect.appendChild(option);
-                    });
-                    playerSchoolSelect.disabled = false;
-                } else {
-                    playerSchoolSelect.innerHTML += '<option value="">Tidak ada sekolah</option>';
-                    playerSchoolSelect.disabled = true;
-                }
-
-                loadUserProgress();
-            });
+                });
         }
 
         // ================================================================
@@ -765,28 +788,27 @@
             feedbackDisplay.textContent = 'Memuat soal...';
             submitAnswerButton.disabled = true;
 
-            getMultiplicationData(level, (error, data) => {
-                if (error) {
+            getMultiplicationData(level)
+                .then(data => {
+                    allMultiplicationData = data;
+                    submitAnswerButton.disabled = false;
+
+                    if (allMultiplicationData.length === 0) {
+                        feedbackDisplay.textContent = 'Tidak ada data perkalian untuk level ini.';
+                        return;
+                    }
+
+                    console.log(`Data Level ${level} dimuat:`, allMultiplicationData.length, 'soal');
+                    currentQuestionIndex = 0;
+                    loadNewQuestion();
+                    startTimer();
+                    feedbackDisplay.textContent = '';
+                })
+                .catch(error => {
                     console.error('Gagal mengambil data spreadsheet:', error);
                     feedbackDisplay.textContent = 'Gagal memuat soal: ' + error.message;
                     submitAnswerButton.disabled = false;
-                    return;
-                }
-
-                allMultiplicationData = data;
-                submitAnswerButton.disabled = false;
-
-                if (allMultiplicationData.length === 0) {
-                    feedbackDisplay.textContent = 'Tidak ada data perkalian untuk level ini.';
-                    return;
-                }
-
-                console.log(`Data Level ${level} dimuat:`, allMultiplicationData.length, 'soal');
-                currentQuestionIndex = 0;
-                loadNewQuestion();
-                startTimer();
-                feedbackDisplay.textContent = '';
-            });
+                });
         }
 
         // ================================================================
@@ -839,16 +861,17 @@
             const schoolToPass = rawPlayerSchool || null;
 
             if (nameToPass && schoolToPass) {
-                getUserProgress(nameToPass, schoolToPass, (error, highestLevel) => {
-                    if (error) {
+                getUserProgress(nameToPass, schoolToPass)
+                    .then(highestLevel => {
+                        highestUnlockedLevel = highestLevel || 0;
+                        updateLevelButtons();
+                        console.log('Progress loaded. Highest Level:', highestUnlockedLevel);
+                    })
+                    .catch(error => {
                         console.error('Gagal memuat progres:', error);
                         highestUnlockedLevel = 0;
-                    } else {
-                        highestUnlockedLevel = highestLevel || 0;
-                    }
-                    updateLevelButtons();
-                    console.log('Progress loaded. Highest Level:', highestUnlockedLevel);
-                });
+                        updateLevelButtons();
+                    });
             } else {
                 highestUnlockedLevel = 0;
                 updateLevelButtons();
@@ -996,13 +1019,14 @@
                 score: score,
                 timeSpent: totalTimeSpent,
                 selectedLevel: selectedLevel
-            }, (error, result) => {
-                if (error) {
-                    console.error('Gagal menyimpan hasil:', error);
-                    alert('Gagal menyimpan hasil game.');
-                } else {
-                    console.log('Hasil disimpan.');
-                }
+            })
+            .then(() => {
+                console.log('Hasil disimpan.');
+                loadUserProgress();
+            })
+            .catch(error => {
+                console.error('Gagal menyimpan hasil:', error);
+                alert('Gagal menyimpan hasil game.');
                 loadUserProgress();
             });
         }
@@ -1065,25 +1089,47 @@
         window.onload = () => {
             updateTimerDisplay();
             
-            // Test koneksi dulu
             const statusText = document.getElementById('status-text');
             statusText.textContent = 'Menguji koneksi...';
             statusText.className = 'status-badge loading';
             
-            fetch(WEB_APP_URL, { method: 'GET' })
-                .then(response => response.json())
-                .then(() => {
-                    statusText.textContent = 'Tersambung';
-                    statusText.className = 'status-badge success';
-                    // Load data setelah koneksi berhasil
-                    fetchInitialData();
-                    preloadGameData();
-                })
-                .catch(error => {
-                    statusText.textContent = 'Gagal: ' + error.message;
-                    statusText.className = 'status-badge error';
-                    alert('Tidak dapat terhubung ke server.\nPastikan URL Web App benar dan sudah dideploy.\n\nError: ' + error.message);
-                });
+            // Test koneksi dengan JSONP
+            const callbackName = 'init_callback_' + Date.now();
+            const script = document.createElement('script');
+            const url = new URL(WEB_APP_URL);
+            url.searchParams.append('callback', callbackName);
+            
+            window[callbackName] = function(response) {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                
+                statusText.textContent = 'Tersambung';
+                statusText.className = 'status-badge success';
+                
+                // Load data setelah koneksi berhasil
+                fetchInitialData();
+                preloadGameData();
+            };
+            
+            const timeout = setTimeout(() => {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                statusText.textContent = 'Gagal koneksi!';
+                statusText.className = 'status-badge error';
+                alert('Tidak dapat terhubung ke server.\n\nPastikan:\n1. URL Web App benar\n2. Web App sudah dideploy\n3. Akses diatur ke "Anyone"\n\nCoba klik tombol "Test Koneksi"');
+            }, 15000);
+            
+            script.src = url.toString();
+            script.onerror = function() {
+                clearTimeout(timeout);
+                delete window[callbackName];
+                document.body.removeChild(script);
+                statusText.textContent = 'Gagal!';
+                statusText.className = 'status-badge error';
+                alert('Gagal koneksi. Cek URL Web App Anda.');
+            };
+            
+            document.body.appendChild(script);
         };
     </script>
 </body>
