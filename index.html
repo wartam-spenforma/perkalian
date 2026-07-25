@@ -445,9 +445,8 @@
 </head>
 <body>
     <div class="container" id="main-container">
-        <h1>TERAMPIL BERHITUNG</h1>
-        <h1>--- PERKALIAN ---</h1>
-        <h2>Berhitung Anda cepat, Anda lebih hebat!</h2>
+        <h1>PERKALIAN CEPAT</h1>
+        <h2>Berhitung cepat, Anda lebih hebat!</h2>
 
         <!-- Status Koneksi -->
         <div id="connection-status" style="margin-bottom: 10px; font-size: 0.9em;">
@@ -555,6 +554,16 @@
             return new Promise((resolve, reject) => {
                 const callbackName = 'jsonp_callback_' + (++jsonpCounter);
                 const script = document.createElement('script');
+                let timeout = null;
+                
+                // Helper pembersihan terpusat
+                const cleanup = () => {
+                    if (timeout) clearTimeout(timeout);
+                    if (window[callbackName]) delete window[callbackName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                };
                 
                 // Buat URL dengan parameter
                 const url = new URL(WEB_APP_URL);
@@ -564,29 +573,25 @@
                 
                 // Definisikan callback global
                 window[callbackName] = function(response) {
-                    delete window[callbackName];
-                    document.body.removeChild(script);
+                    cleanup();
                     
-                    if (response.success) {
+                    if (response && response.success) {
                         resolve(response.data);
                     } else {
-                        reject(new Error(response.error || 'Unknown error'));
+                        reject(new Error((response && response.error) || 'Unknown error'));
                     }
                 };
                 
                 // Set timeout untuk error
-                const timeout = setTimeout(() => {
-                    delete window[callbackName];
-                    document.body.removeChild(script);
+                timeout = setTimeout(() => {
+                    cleanup();
                     reject(new Error('Request timeout'));
                 }, 30000);
                 
                 // Load script
                 script.src = url.toString();
                 script.onerror = function() {
-                    clearTimeout(timeout);
-                    delete window[callbackName];
-                    document.body.removeChild(script);
+                    cleanup();
                     reject(new Error('Failed to load script'));
                 };
                 
@@ -605,21 +610,29 @@
             // Test dengan JSONP tanpa function
             const callbackName = 'test_callback_' + Date.now();
             const script = document.createElement('script');
+            let timeout = null;
+
+            const cleanup = () => {
+                if (timeout) clearTimeout(timeout);
+                if (window[callbackName]) delete window[callbackName];
+                if (script && script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+            };
+
             const url = new URL(WEB_APP_URL);
             url.searchParams.append('callback', callbackName);
             
             window[callbackName] = function(response) {
-                delete window[callbackName];
-                document.body.removeChild(script);
+                cleanup();
                 
                 statusText.textContent = 'Tersambung!';
                 statusText.className = 'status-badge success';
                 alert('Koneksi berhasil!\nResponse: ' + JSON.stringify(response, null, 2));
             };
             
-            const timeout = setTimeout(() => {
-                delete window[callbackName];
-                document.body.removeChild(script);
+            timeout = setTimeout(() => {
+                cleanup();
                 statusText.textContent = 'Timeout!';
                 statusText.className = 'status-badge error';
                 alert('Koneksi timeout. Cek URL Web App Anda.');
@@ -627,9 +640,7 @@
             
             script.src = url.toString();
             script.onerror = function() {
-                clearTimeout(timeout);
-                delete window[callbackName];
-                document.body.removeChild(script);
+                cleanup();
                 statusText.textContent = 'Gagal!';
                 statusText.className = 'status-badge error';
                 alert('Gagal koneksi. Pastikan URL Web App benar.');
@@ -1169,12 +1180,21 @@
             // Test koneksi dengan JSONP
             const callbackName = 'init_callback_' + Date.now();
             const script = document.createElement('script');
+            let timeout = null;
+
+            const cleanup = () => {
+                if (timeout) clearTimeout(timeout);
+                if (window[callbackName]) delete window[callbackName];
+                if (script && script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+            };
+
             const url = new URL(WEB_APP_URL);
             url.searchParams.append('callback', callbackName);
             
             window[callbackName] = function(response) {
-                delete window[callbackName];
-                document.body.removeChild(script);
+                cleanup();
                 
                 statusText.textContent = 'Tersambung';
                 statusText.className = 'status-badge success';
@@ -1184,9 +1204,8 @@
                 preloadGameData();
             };
             
-            const timeout = setTimeout(() => {
-                delete window[callbackName];
-                document.body.removeChild(script);
+            timeout = setTimeout(() => {
+                cleanup();
                 statusText.textContent = 'Gagal koneksi!';
                 statusText.className = 'status-badge error';
                 alert('Tidak dapat terhubung ke server.\n\nPastikan:\n1. URL Web App benar\n2. Web App sudah dideploy\n3. Akses diatur ke "Anyone"\n\nCoba klik tombol "Test Koneksi"');
@@ -1194,9 +1213,7 @@
             
             script.src = url.toString();
             script.onerror = function() {
-                clearTimeout(timeout);
-                delete window[callbackName];
-                document.body.removeChild(script);
+                cleanup();
                 statusText.textContent = 'Gagal!';
                 statusText.className = 'status-badge error';
                 alert('Gagal koneksi. Cek URL Web App Anda.');
